@@ -1,0 +1,145 @@
+<body style="margin:0"><canvas id="c"></canvas></body>
+<script src="stats.js"></script>
+<script>
+kname=[]
+kcode=[]
+onkeydown=onkeyup=(e)=>{
+  kname[e.key]=e.type=="keydown"
+  kcode[e.keyCode]=e.type=="keydown"
+}
+eye={pos:{x:0,y:0,z:0},angle:{x:0,y:0}}
+obj=[]
+g=(x,y,z,r,g,b,a)=>{
+  obj1={x:x,y:y,z:z,r:r,g:g,b:b,a:a}
+  obj.push(obj1)
+}
+
+onmousedown=()=>{
+  if(document.pointerLockElement===document.body||
+  document.mozPointerLockElement===document.body){
+  }else{
+    document.body.requestPointerLock()
+  }
+}
+
+onmousemove=(event)=>{
+  if(document.pointerLockElement===document.body||
+  document.mozPointerLockElement===document.body){
+    eye.angle.x+=0.01*event.movementX
+    if(-1.5<eye.angle.y&&0<event.movementY){
+      eye.angle.y-=0.01*event.movementY
+    }
+    if(eye.angle.y<1.5&&event.movementY<0){
+      eye.angle.y-=0.01*event.movementY
+    }
+  }
+}
+
+render=()=>{
+  requestAnimationFrame(render)
+  c.width=innerWidth
+  c.height=innerHeight
+  ctx.fillStyle="rgb(0,127,255)"
+  ctx.fillRect(0,0,c.width,c.height)
+
+  // Paso 1: calcular rz para ordenación con rotación horizontal solamente
+  for (let obj1 of obj) {
+    let dx = obj1.x - eye.pos.x;
+    let dy = obj1.y - eye.pos.y;
+    let dz = obj1.z - eye.pos.z;
+
+    let cosY = Math.cos(eye.angle.x);
+    let sinY = Math.sin(eye.angle.x);
+    let cosX = Math.cos(eye.angle.y);
+    let sinX = Math.sin(eye.angle.y);
+
+    // Rotación horizontal
+    let rx = cosY * dx - sinY * dz;
+    let rz = sinY * dx + cosY * dz;
+
+    // Rotación vertical
+    let ry = cosX * dy - sinX * rz;
+    let rz2 = sinX * dy + cosX * rz;
+
+    obj1._rx = rx;
+    obj1._ry = ry;
+    obj1._rz = rz2;     // profundidad final
+    obj1._depth = rz2;  // para ordenar
+  }
+
+
+  // Paso 2: ordenar de más lejos a más cerca
+  obj.sort((a, b) => b._depth - a._depth);
+
+  // Paso 3: dibujar cada objeto con rotaciones horizontal y vertical
+  for (let obj1 of obj) {
+    let rx = obj1._rx;
+    let ry = obj1._ry;
+    let rz2 = obj1._rz;
+
+    if (rz2 > 0.001) {
+      let scale = 500;
+      let size = scale / rz2;
+      let sx = rx / rz2 * scale + c.width / 2 - size / 2;
+      let sy = -ry / rz2 * scale + c.height / 2 - size / 2;
+
+      ctx.fillStyle = `rgba(${obj1.r},${obj1.g},${obj1.b},${obj1.a})`;
+      ctx.fillRect(sx, sy, size, size);
+    }
+  }
+
+
+  if(kname["a"]){
+    eye.pos.x-=0.05*Math.cos(eye.angle.x)
+    eye.pos.z+=0.05*Math.sin(eye.angle.x)
+  }
+  if(kname["d"]){
+    eye.pos.x+=0.05*Math.cos(eye.angle.x)
+    eye.pos.z-=0.05*Math.sin(eye.angle.x)
+  }
+  if(kname["w"]){
+    eye.pos.x+=0.05*Math.sin(eye.angle.x)
+    eye.pos.z+=0.05*Math.cos(eye.angle.x)
+  }
+  if(kname["s"]){
+    eye.pos.x-=0.05*Math.sin(eye.angle.x)
+    eye.pos.z-=0.05*Math.cos(eye.angle.x)
+  }
+  if(kname[" "]){
+    eye.pos.y+=0.05
+  }
+  if(kname["x"]){
+    eye.pos.y-=0.05
+  }
+}
+onload=()=>{
+  // Show stats:
+  var stats1 = new Stats();
+  stats1.showPanel(0); // Panel 0 = fps
+  stats1.domElement.style.cssText = 'position:absolute;top:0px;left:0px;';
+  document.body.appendChild(stats1.domElement);
+
+  function animate(){
+    requestAnimationFrame(animate)
+    stats1.update();
+  }
+
+  requestAnimationFrame(animate);
+  ctx=c.getContext("2d")
+  for(x=0;x<10;x++){
+    for(z=0;z<10;z++){
+      for(y=0;y<10;y++){
+          g(
+          //Position:
+          x,y,z,
+          //Color:
+          0,255*Math.random(),0,
+          //Opacity:
+          1
+        )
+      }
+    }
+  }
+  render()
+}
+</script>
